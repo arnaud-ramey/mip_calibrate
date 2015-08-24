@@ -1,0 +1,37 @@
+<launch>
+<arg name="robot" value="mip"/>
+<!-- autostart: true to start the PPLP at startup -->
+<arg name="autostart" default="true"/>
+
+<!-- TF between the floor and the kinect -->
+<node pkg="tf" type="static_transform_publisher" name="base_link_tf_broadcaster"
+      args="0 0 0.75   0 0 0   floor  mip_camera_link   100"/>
+
+<!-- use freenect -->
+<include file="$(find kinect)/launch/kinect_node_local.launch">
+  <arg name="robot" value="$(arg robot)" />
+  <arg name="data_skip" value="0" />
+  <arg name="use_freenect" value="true"/>
+  <arg name="use_openni1" value="false"/>
+  <arg name="use_openni2" value="false"/>
+</include>
+
+<!--
+<include file="$(find kinect)/launch/kinect_viewer.launch">
+  <arg name="robot" value="$(arg robot)" />
+</include>
+-->
+
+<group ns="$(arg robot)">
+  <node pkg="mip_calibrate" type="mip_calibrate.exe"
+    name="mip_calibrate"  output="screen"
+    args="_static_frame:=floor  _display:=true
+          _update_background:=false _foreground_min_bw_diff:=10
+          _use_rgb:=true _use_depth_canny:=false
+          _max_comp_z:=3  _min_comp_size:=500">
+    <param name="background_models_filename_prefix" value="$(find mip_calibrate)/data/MIPCalibrate_2015-08-24_22-51-48-145"/>
+    <param if="$(arg autostart)" name="autostart" value="true"/>
+  </node>
+</group>
+</launch>
+

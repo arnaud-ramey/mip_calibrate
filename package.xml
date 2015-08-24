@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<!-- doc: http://wiki.ros.org/catkin/package.xml -->
+<package format="2">
+  <name>mip_calibrate</name>
+  <version>0.0.0</version>
+  <description>
+    mip_calibrate : Auto-calibration for MIP robot
+  </description>
+  <maintainer email="arnaud.a.ramey@gmail.com">Arnaud Ramey</maintainer>
+  <license>LGPLv3</license>
+  <!-- dependencies -->
+  <buildtool_depend>catkin</buildtool_depend>
+  <depend>roscpp</depend>
+  <depend>vision_utils</depend>
+
+  <export>
+    <rosdoc config="rosdoc.yaml" /> <!-- http://wiki.ros.org/rosdoc_lite -->
+  </export>
+</package>
