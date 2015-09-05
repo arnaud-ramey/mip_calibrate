@@ -16,20 +16,18 @@
   <arg name="use_openni2" value="false"/>
 </include>
 
-<!--
 <include file="$(find kinect)/launch/kinect_viewer.launch">
   <arg name="robot" value="$(arg robot)" />
 </include>
--->
 
 <group ns="$(arg robot)">
   <node pkg="mip_calibrate" type="mip_calibrate.exe"
     name="mip_calibrate"  output="screen"
     args="_static_frame:=floor  _display:=true
-          _update_background:=false _foreground_min_bw_diff:=10
-          _use_rgb:=true _use_depth_canny:=false
-          _max_comp_z:=3  _min_comp_size:=500">
-    <param name="background_models_filename_prefix" value="$(find mip_calibrate)/data/MIPCalibrate_2015-08-24_22-51-48-145"/>
+          _update_background:=false
+          _use_rgb:=true  _use_depth_canny:=false _foreground_min_bw_diff:=60
+          _max_comp_z:=3  _min_comp_size:=1000">
+    <param name="background_models_filename_prefix" value="$(find mip_calibrate)/data/MIPCalibrate_2015-09-05_15-11-36-836"/>
     <param if="$(arg autostart)" name="autostart" value="true"/>
   </node>
 </group>

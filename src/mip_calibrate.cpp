@@ -96,6 +96,8 @@ TODO see integration of https://github.com/andrewssobral/bgslibrary ?
 #include <tf/transform_datatypes.h>
 #include <tf/transform_listener.h>
 #include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include <ros/package.h>
 
 #undef DEBUG_PRINT
 #define DEBUG_PRINT(...)   printf(__VA_ARGS__)
@@ -129,14 +131,15 @@ public:
     _nh_private.param("canny_thres1", canny_thres2, DEFAULT_CANNY_THRES2_auxConst);
     _canny.set_canny_thresholds(canny_thres1, canny_thres2);
 
-    bool has_bg_models = false;
     if (!bg_prefix.empty()) {
       cv::Mat3b bw_background3b;
-      has_bg_models = image_utils::read_rgb_and_depth_image_from_image_file
-          (bg_prefix, &bw_background3b, &_depth_background);
+      bool has_rgb_model = image_utils::read_rgb_and_depth_image_from_image_file
+          (bg_prefix, &bw_background3b, NULL);
       // grayscale conversion
-      if (has_bg_models)
-        cv::cvtColor(bw_background3b, _bw_background, CV_BGR2GRAY);
+      cv::cvtColor(bw_background3b, _bw_background, CV_BGR2GRAY);
+      bool has_depth_model = image_utils::read_rgb_and_depth_image_from_image_file
+          (bg_prefix, NULL, &_depth_background);
+      imshow_backgrounds(has_rgb_model, has_depth_model);
     }
 
     // get camera model
@@ -152,15 +155,21 @@ public:
          << "', update_background:" << _update_background
          << ", use_rgb:" << _use_rgb
          << ", display:" << _display;
-    if (_display)
-      info << ", using bg model '" << bg_prefix << "'";
+    if (bg_prefix.empty())
+      info << ", without bg model. ";
     else
-      info << ", without bg model";
+      info << ", using bg model '" << bg_prefix << "'. ";
+    info << "Press ' ' in the windows to define a new background model. ";
+    info << "Press 'm' in the windows to switch between depth and rgb background substraction. ";
     if (_display)
-      info << ". Press 's' in the windows to save background models to disk.";
+      info << "Press 's' in the windows to save background models to disk.";
     DEBUG_PRINT("%s\n", info.str().c_str());
-    if (has_bg_models)
-      imshow_backgrounds(true, true);
+
+    if (_display) {
+      cv::namedWindow("MIPCalibrate-bw_background");
+      cv::createTrackbar("foreground_min_bw_diff", "MIPCalibrate-bw_background",
+                         &_foreground_min_bw_diff, 255);
+    }
   } // end ctor
 
   //////////////////////////////////////////////////////////////////////////////
@@ -356,16 +365,27 @@ public:
     char c = cv::waitKey(25);
     if (c == 's') {
       std::ostringstream prefix;
+      prefix << ros::package::getPath("mip_calibrate") << "/data/";
       prefix << "MIPCalibrate_" << string_utils::timestamp();
       image_utils::write_rgb_and_depth_image_to_image_file
-          (prefix.str(), &_bw_background, &_depth_background);
-    }
-    else if (!_use_rgb && c == ' ') {
+          (prefix.str(),
+           (_bw_background.empty() ? NULL : &_bw_background),
+           (_depth_background.empty() ? NULL : &_depth_background));
+    } // end 's'
+    else if (c == 'm') {
+      _use_rgb = !_use_rgb;
+    } // end 'm'
+    else if (c == ' ') {
       printf("MIPCalibrate: storing new background\n");
-      depth.copyTo(_depth_background);
-      if (_display)
-        cv::imshow("MIPCalibrate_background", image_utils::depth2viz(_depth_background, image_utils::FULL_RGB_STRETCHED));
-    }
+      if (_use_rgb) {
+        _bw_frame.copyTo(_bw_background);
+      }
+      else { // depth
+        depth.copyTo(_depth_background);
+        if (_display)
+          cv::imshow("MIPCalibrate_background", image_utils::depth2viz(_depth_background, image_utils::FULL_RGB_STRETCHED));
+      }
+    } // end ' '
   } // end display();
 
   //////////////////////////////////////////////////////////////////////////////
