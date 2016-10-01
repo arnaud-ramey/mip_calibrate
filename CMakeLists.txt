@@ -9,7 +9,7 @@ find_package(catkin REQUIRED COMPONENTS
 ### 5 - Invoke message/service/action generation (generate_messages())
 ### 6 - Specify package build info export (catkin_package())
 catkin_package(
-  INCLUDE_DIRS include
+  INCLUDE_DIRS
   CATKIN_DEPENDS roscpp
   DEPENDS vision_utils
 )
