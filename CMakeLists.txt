@@ -4,14 +4,14 @@ cmake_minimum_required(VERSION 2.8.3)
 project(mip_calibrate)
 ### 3 - Find other CMake/Catkin packages needed for build
 find_package(catkin REQUIRED COMPONENTS
-  roscpp vision_utils)
+  roscpp)
 ### 4 - Message/Service/Action Generators (add_message_files(), add_service_files(), add_action_files())
 ### 5 - Invoke message/service/action generation (generate_messages())
 ### 6 - Specify package build info export (catkin_package())
 catkin_package(
   INCLUDE_DIRS
   CATKIN_DEPENDS roscpp
-  DEPENDS vision_utils
+  DEPENDS
 )
 ### 7 - Libraries/Executables to build (add_library()/add_executable()/target_link_libraries())
 include_directories(

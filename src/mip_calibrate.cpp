@@ -82,16 +82,12 @@ this can be useful to discriminate between users and other objects for instance.
 TODO see integration of https://github.com/andrewssobral/bgslibrary ?
  */
 // AD
-#include "vision_utils/color_utils.h"
-#include "vision_utils/cv_conversion_float_uchar.h"
+
 #include "vision_utils/depth_canny.h"
 #include "vision_utils/disjoint_sets2.h"
-#include "vision_utils/drawing_utils.h"
-#include "vision_utils/kinect_openni_utils.h"
 #include "vision_utils/rgb_depth_skill.h"
-#include "vision_utils/utils/pt_utils.h"
-#include "vision_utils/utils/timer.h"
-#include "vision_utils/utils/timestamp.h"
+#include "vision_utils/timer.h"
+#include "vision_utils/timestamp.h"
 // ROS
 #include <tf/transform_datatypes.h>
 #include <tf/transform_listener.h>
@@ -133,18 +129,18 @@ public:
 
     if (!bg_prefix.empty()) {
       cv::Mat3b bw_background3b;
-      bool has_rgb_model = image_utils::read_rgb_and_depth_image_from_image_file
+      bool has_rgb_model = vision_utils::read_rgb_and_depth_image_from_image_file
           (bg_prefix, &bw_background3b, NULL);
       // grayscale conversion
       cv::cvtColor(bw_background3b, _bw_background, CV_BGR2GRAY);
-      bool has_depth_model = image_utils::read_rgb_and_depth_image_from_image_file
+      bool has_depth_model = vision_utils::read_rgb_and_depth_image_from_image_file
           (bg_prefix, NULL, &_depth_background);
       imshow_backgrounds(has_rgb_model, has_depth_model);
     }
 
     // get camera model
     image_geometry::PinholeCameraModel rgb_camera_model;
-    kinect_openni_utils::read_camera_model_files
+    vision_utils::read_camera_model_files
         (DEFAULT_KINECT_SERIAL(), _default_depth_camera_model, rgb_camera_model);
 
     std::ostringstream info;
@@ -189,7 +185,7 @@ public:
                                  const cv::Mat1f & depth) {
     DEBUG_PRINT("process_rgb_depth()\n");
 
-    Timer timer;
+    vision_utils::Timer timer;
     // clear previous data
     _cuts_offsets.clear();
     _rgb_cuts.clear();
@@ -228,10 +224,10 @@ public:
       float* background_ptr = _depth_background.ptr<float>();
       for (unsigned int pixel_idx = 0; pixel_idx < n_pixels; ++pixel_idx) {
         // remove from foreground the points were depth is not defined (0)
-        if(!std_utils::is_nan_depth(*depth_ptr)
+        if(!vision_utils::is_nan_depth(*depth_ptr)
            && *depth_ptr >= _min_comp_z
            && *depth_ptr <= _max_comp_z) {
-          bool background_defined = !std_utils::is_nan_depth(*background_ptr);
+          bool background_defined = !vision_utils::is_nan_depth(*background_ptr);
           if (!background_defined
               || *depth_ptr < *background_ptr * _foreground_min_depth_ratio) { // this pixel is foreground
             *foreground_ptr = 255;
@@ -283,23 +279,23 @@ public:
       // reproject lower middle 3D
       cv::Point2d head2D (tl.x + roi.width / 2, tl.y + roi.height * .9);
       cv::Point3d head3D_world, head3D_cam =
-          kinect_openni_utils::pixel2world_depth<cv::Point3d>
+          vision_utils::pixel2world_depth<cv::Point3d>
           (head2D, _default_depth_camera_model, depth);
       try {
         geometry_msgs::PoseStamped pose_cam, pose_world;
-        pt_utils::copy3(head3D_cam, pose_cam.pose.position);
+        vision_utils::copy3(head3D_cam, pose_cam.pose.position);
         pose_cam.pose.orientation = tf::createQuaternionMsgFromYaw(0);
         pose_cam.header = _images_header;
         pose_world.header.stamp = _images_header.stamp;
         pose_world.header.frame_id = _static_frame;
         _tf_listener->transformPose(_static_frame, ros::Time(0),
                                     pose_cam, _static_frame, pose_world);
-        pt_utils::copy3(pose_world.pose.position, head3D_world);
+        vision_utils::copy3(pose_world.pose.position, head3D_world);
       } catch (std::runtime_error e) {
         ROS_WARN("transform error:'%s'", e.what());
         continue;
       }
-      DEBUG_PRINT("Head %i:%s\n", bbox_idx, geometry_utils::printP(head3D_world).c_str());
+      DEBUG_PRINT("Head %i:%s\n", bbox_idx, vision_utils::printP(head3D_world).c_str());
 
       // keep it in _blobs_centers2d3d
       std::pair<cv::Point, cv::Point3d> new_pair(head2D, head3D_world);
@@ -326,7 +322,7 @@ public:
       cv::imshow("MIPCalibrate-bw_background", _bw_background);
     if (_display && depth && !_bw_background.empty())
       cv::imshow("MIPCalibrate-depth_background",
-                 image_utils::depth2viz(_depth_background, image_utils::FULL_RGB_STRETCHED));
+                 vision_utils::depth2viz(_depth_background, vision_utils::FULL_RGB_STRETCHED));
   }
 
   //////////////////////////////////////////////////////////////////////////////
@@ -338,16 +334,16 @@ public:
     //      cv::imshow("bw_frame", _bw_frame);
     //    }
     //    else
-    //      cv::imshow("depth", image_utils::depth2viz(depth, image_utils::FULL_RGB_STRETCHED));
+    //      cv::imshow("depth", vision_utils::depth2viz(depth, vision_utils::FULL_RGB_STRETCHED));
 
     //cv::imshow("MIPCalibrate_foreground", _foreground);
     cv::cvtColor(_foreground, img_out, CV_GRAY2BGR);
     // paint components
     for (unsigned int comp_idx = 0; comp_idx < _components_pts.size(); ++comp_idx) {
       if (_comp_was_kept[comp_idx])
-        image_utils::drawListOfPoints
+        vision_utils::drawListOfPoints
             (img_out, _components_pts[comp_idx],
-             color_utils::color<cv::Vec3b>(comp_idx));
+             vision_utils::color<cv::Vec3b>(comp_idx));
     } // end for comp_idx
     // paints strings for the blobs 3D positions
     for (unsigned int blob_idx = 0; blob_idx < _blobs_centers2d3d.size(); ++blob_idx) {
@@ -366,8 +362,8 @@ public:
     if (c == 's') {
       std::ostringstream prefix;
       prefix << ros::package::getPath("mip_calibrate") << "/data/";
-      prefix << "MIPCalibrate_" << string_utils::timestamp();
-      image_utils::write_rgb_and_depth_image_to_image_file
+      prefix << "MIPCalibrate_" << vision_utils::timestamp();
+      vision_utils::write_rgb_and_depth_image_to_image_file
           (prefix.str(),
            (_bw_background.empty() ? NULL : &_bw_background),
            (_depth_background.empty() ? NULL : &_depth_background));
@@ -383,7 +379,7 @@ public:
       else { // depth
         depth.copyTo(_depth_background);
         if (_display)
-          cv::imshow("MIPCalibrate_background", image_utils::depth2viz(_depth_background, image_utils::FULL_RGB_STRETCHED));
+          cv::imshow("MIPCalibrate_background", vision_utils::depth2viz(_depth_background, vision_utils::FULL_RGB_STRETCHED));
       }
     } // end ' '
   } // end display();
