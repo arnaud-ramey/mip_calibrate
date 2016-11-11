@@ -82,12 +82,18 @@ this can be useful to discriminate between users and other objects for instance.
 TODO see integration of https://github.com/andrewssobral/bgslibrary ?
  */
 // AD
-
+#include "vision_utils/color_utils.h"
+#include "vision_utils/copy3.h"
 #include "vision_utils/depth_canny.h"
+#include "vision_utils/depth_image_to_vizualisation_color_image.h"
 #include "vision_utils/disjoint_sets2.h"
+#include "vision_utils/drawListOfPoints.h"
+#include "vision_utils/printP.h"
+#include "vision_utils/read_rgb_and_depth_image_from_image_file.h"
 #include "vision_utils/rgb_depth_skill.h"
 #include "vision_utils/timer.h"
 #include "vision_utils/timestamp.h"
+#include "vision_utils/write_rgb_and_depth_image_to_image_file.h"
 // ROS
 #include <tf/transform_datatypes.h>
 #include <tf/transform_listener.h>
@@ -99,9 +105,9 @@ TODO see integration of https://github.com/andrewssobral/bgslibrary ?
 #define DEBUG_PRINT(...)   printf(__VA_ARGS__)
 
 
-class MIPCalibrate : public RgbDepthSkill  {
+class MIPCalibrate : public vision_utils::RgbDepthSkill  {
 public:
-  MIPCalibrate() : RgbDepthSkill("MIP_CALIBRATE_START",
+  MIPCalibrate() : vision_utils::RgbDepthSkill("MIP_CALIBRATE_START",
                                  "MIP_CALIBRATE_STOP")
   {
     _tf_listener = new tf::TransformListener();
@@ -121,8 +127,8 @@ public:
     _nh_private.param("min_comp_z", _min_comp_z, -10.);
     _nh_private.param("max_comp_z", _max_comp_z, 10.);
     double canny_thres1, canny_thres2;
-    const double DEFAULT_CANNY_THRES1_auxConst = DepthCanny::DEFAULT_CANNY_THRES1;
-    const double DEFAULT_CANNY_THRES2_auxConst = DepthCanny::DEFAULT_CANNY_THRES2;
+    const double DEFAULT_CANNY_THRES1_auxConst = vision_utils::DepthCanny::DEFAULT_CANNY_THRES1;
+    const double DEFAULT_CANNY_THRES2_auxConst = vision_utils::DepthCanny::DEFAULT_CANNY_THRES2;
     _nh_private.param("canny_thres1", canny_thres1, DEFAULT_CANNY_THRES1_auxConst);
     _nh_private.param("canny_thres1", canny_thres2, DEFAULT_CANNY_THRES2_auxConst);
     _canny.set_canny_thresholds(canny_thres1, canny_thres2);
@@ -141,7 +147,7 @@ public:
     // get camera model
     image_geometry::PinholeCameraModel rgb_camera_model;
     vision_utils::read_camera_model_files
-        (DEFAULT_KINECT_SERIAL(), _default_depth_camera_model, rgb_camera_model);
+        (vision_utils::DEFAULT_KINECT_SERIAL(), _default_depth_camera_model, rgb_camera_model);
 
     std::ostringstream info;
     info << "MIPCalibrate: started with '" << get_start_stopic()
@@ -388,10 +394,10 @@ public:
 
 private:
   //! Canny
-  DepthCanny _canny;
+  vision_utils::DepthCanny _canny;
 
   //! disjoint sets
-  DisjointSets2 _set;
+  vision_utils::DisjointSets2 _set;
   std::vector< std::vector<cv::Point> > _components_pts;
   std::vector<cv::Rect> _boundingBoxes;
   std::vector<bool> _comp_was_kept;
